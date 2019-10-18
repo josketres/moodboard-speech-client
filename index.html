@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang=en>
+<head>
+	<meta charset=utf-8>
+	<title>Moodboard speech client</title>
+</head>
+<body>
+<h1>Moodboard speech client</h1>
+<button id="start">Start</button>
+<button id="stop">Stop</button>
+<p class="output"></p>
+<script type="text/javascript">
+	const SpeechRecognition = webkitSpeechRecognition || SpeechRecognition;
+	const SpeechGrammarList = webkitSpeechGrammarList || SpeechGrammarList;
+	const SpeechRecognitionEvent = webkitSpeechRecognitionEvent || SpeechRecognitionEvent;
+
+	const recognition = new SpeechRecognition();
+	const speechRecognitionList = new SpeechGrammarList();
+
+	const grammar = "#JSGF V1.0; grammar empty;";
+	speechRecognitionList.addFromString(grammar, 1);
+
+	recognition.grammars = speechRecognitionList;
+	recognition.continuous = true;
+	recognition.lang = "en-US";
+	recognition.interimResults = true;
+	recognition.maxAlternatives = 1;
+
+	var output = document.querySelector(".output");
+
+	const start = document.getElementById("start");
+	const stop = document.getElementById("stop");
+
+	stop.setAttribute("disabled", "disabled");
+	start.addEventListener("click", () => {
+		recognition.start();
+		start.setAttribute("disabled", "disabled");
+		stop.removeAttribute("disabled");
+	});
+	stop.addEventListener("click", () => {
+		recognition.stop();
+		stop.setAttribute("disabled", "disabled");
+		start.removeAttribute("disabled");
+	});
+
+	recognition.onresult = function (event) {
+		var last = event.results.length - 1;
+		var mood = event.results[last][0].transcript.trim();
+		output.textContent = mood;
+		console.log("Confidence: " + event.results[0][0].confidence);
+		postToMoodboard(mood);
+	};
+
+	async function postToMoodboard(mood) {
+		const moodEncoded = encodeURIComponent(mood);
+		const url = `http://local.tipp24.com/mood/${moodEncoded}`;
+
+		console.log(url);
+		try {
+			const response = await fetch(url, {
+				method: "PUT",
+				mode: 'cors',
+			});
+			const json = await response.json();
+			console.log("Success:", JSON.stringify(json));
+		} catch (error) {
+			console.error("Error:", error);
+		}
+	}
+
+</script>
+</body>
+</html>
